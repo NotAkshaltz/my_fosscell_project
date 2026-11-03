@@ -1,71 +1,86 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
+#include <string.h>
 
 /**
- * Level 2: Debugging Inconsistencies
- * 
- * Your task:
- * 1. Identify and fix code inconsistencies.
- * 2. Address the mixed coding styles (indentation, naming).
- * 3. Find potential memory leaks or undefined behaviors.
- * 4. Ensure error handling is consistent.
+ * Level 2: Debugging Inconsistencies (fixed)
+ *
+ * - All functions use snake_case naming.
+ * - Every function that can fail returns a status code checked by the caller.
+ * - Array size is derived once instead of hardcoded in several places.
+ * - Allocated memory is always freed.
  */
 
-// Global constant
 #define MAX_SIZE 1000
 
-// Inconsistent naming: CamelCase and snake_case
-void SwapElements(int *a, int *b) {
-    int t = *a;
+static void swap_elements(int *a, int *b) {
+    int tmp = *a;
     *a = *b;
-    *b = t;
+    *b = tmp;
 }
 
-int partition_array(int arr[], int low, int high) {
+static int partition_array(int arr[], int low, int high) {
     int pivot = arr[high];
-    int i = (low - 1);
+    int i = low - 1;
 
-    for (int j = low; j <= high - 1; j++) {
+    for (int j = low; j < high; j++) {
         if (arr[j] < pivot) {
             i++;
-            SwapElements(&arr[i], &arr[j]);
+            swap_elements(&arr[i], &arr[j]);
         }
     }
-    SwapElements(&arr[i + 1], &arr[high]);
-    return (i + 1);
+    swap_elements(&arr[i + 1], &arr[high]);
+    return i + 1;
 }
 
-// Inconsistent function style
-void QuickSort(int arr[], int low, int high) {
+static void quick_sort_range(int arr[], int low, int high) {
     if (low < high) {
-        int pi = partition_array(arr, low, high);
-        QuickSort(arr, low, pi - 1);
-        QuickSort(arr, pi + 1, high);
+        int pivot_index = partition_array(arr, low, high);
+        quick_sort_range(arr, low, pivot_index - 1);
+        quick_sort_range(arr, pivot_index + 1, high);
     }
 }
 
-void printArray(int arr[], int size) {
-    for (int i = 0; i < size; i++)
+/* Public entry point: sorts the whole array. Returns 0 on success, -1 on bad input. */
+static int quick_sort(int arr[], size_t size) {
+    if (arr == NULL || size > MAX_SIZE) {
+        return -1;
+    }
+    if (size > 1) {
+        quick_sort_range(arr, 0, (int)size - 1);
+    }
+    return 0;
+}
+
+static void print_array(const char *label, const int arr[], size_t size) {
+    printf("%s\n", label);
+    for (size_t i = 0; i < size; i++) {
         printf("%d ", arr[i]);
+    }
     printf("\n");
 }
 
-int main() {
-    int *data = (int *)malloc(10 * sizeof(int));
-    
-    // Hardcoded test
-    data[0] = 10; data[1] = 7; data[2] = 8; data[3] = 9; data[4] = 1;
-    data[5] = 5; data[6] = 2; data[7] = 3; data[8] = 4; data[9] = 6;
+int main(void) {
+    const int initial_values[] = {10, 7, 8, 9, 1, 5, 2, 3, 4, 6};
+    const size_t size = sizeof(initial_values) / sizeof(initial_values[0]);
 
-    printf("Original array: \n");
-    printArray(data, 10);
+    int *data = malloc(size * sizeof(*data));
+    if (data == NULL) {
+        fprintf(stderr, "Error: memory allocation failed\n");
+        return EXIT_FAILURE;
+    }
+    memcpy(data, initial_values, size * sizeof(*data));
 
-    QuickSort(data, 0, 9);
-    
-    printf("Sorted array: \n");
-    printArray(data, 10);
+    print_array("Original array:", data, size);
 
-    // Missing free!
-    return 0;
+    if (quick_sort(data, size) != 0) {
+        fprintf(stderr, "Error: invalid input to quick_sort\n");
+        free(data);
+        return EXIT_FAILURE;
+    }
+
+    print_array("Sorted array:", data, size);
+
+    free(data);
+    return EXIT_SUCCESS;
 }
